@@ -1,5 +1,8 @@
-package com.rf.laundrybooking
+package com.rf.laundrybooking.booking
 
+import com.rf.laundrybooking.schedule.BookingSchedule
+import com.rf.laundrybooking.schedule.Room
+import com.rf.laundrybooking.schedule.TimeSlot
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -21,8 +24,8 @@ class BookingService(private val repository: BookingRepository,
     fun book(user: User, room: Room, date: LocalDate, timeSlotId: Int) =
             repository.book(user, room, date, schedule.getPeriod(timeSlotId))
 
-    fun cancel(room: Room, day: LocalDate, timeSlotId: Int): Booking {
-        val booking = repository.get(TimeSlot(room, day, schedule.getPeriod(timeSlotId)))
+    fun cancel(id: String): Booking {
+        val booking = repository.get(id)
         repository.cancel(booking)
         return booking
     }

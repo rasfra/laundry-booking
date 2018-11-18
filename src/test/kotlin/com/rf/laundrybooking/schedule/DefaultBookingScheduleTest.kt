@@ -1,4 +1,4 @@
-package com.rf.laundrybooking
+package com.rf.laundrybooking.schedule
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -9,11 +9,11 @@ class DefaultBookingScheduleTest {
 
     @Test
     fun generatesSlotPeriods() {
-        assertEquals(2, schedule.slotPeriods.size)
-        assertEquals(12, schedule.slotPeriods[0].start.hour)
-        assertEquals(16, schedule.slotPeriods[0].end.hour)
-        assertEquals(16, schedule.slotPeriods[1].start.hour)
-        assertEquals(20, schedule.slotPeriods[1].end.hour)
+        assertEquals(2, schedule.timePeriods.size)
+        assertEquals(12, schedule.timePeriods[0].start.hour)
+        assertEquals(16, schedule.timePeriods[0].end.hour)
+        assertEquals(16, schedule.timePeriods[1].start.hour)
+        assertEquals(20, schedule.timePeriods[1].end.hour)
     }
 
     @Test
@@ -25,10 +25,10 @@ class DefaultBookingScheduleTest {
                 secondDay.atTime(15, 0))
 
         assertEquals(6, result.size)
-        val firstPeriod = schedule.slotPeriods[0]
-        val secondPeriod = schedule.slotPeriods[1]
-        val firstRoom = Room(0)
-        val secondRoom = Room(1)
+        val firstPeriod = schedule.timePeriods[0]
+        val secondPeriod = schedule.timePeriods[1]
+        val firstRoom = Room("1")
+        val secondRoom = Room("2")
 
         var i = 0
         assertEquals(TimeSlot(firstRoom, firstDay, firstPeriod), result[i++])
