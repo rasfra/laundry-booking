@@ -15,7 +15,7 @@ class DefaultBookingSchedule : BookingSchedule {
         require(start + durationHrs.sum() <= 24) { "Sum of hours exceeds a day" }
         val list = ArrayList<TimePeriod>()
         var hour = start
-        // Generate SlotPeriods according to the schema
+        // Generate TimePeriods according to the schema
         for ((id, duration) in durationHrs.withIndex()) {
             list.add(TimePeriod(id, LocalTime.of(hour, 0), LocalTime.of(hour + duration, 0)))
             hour += duration

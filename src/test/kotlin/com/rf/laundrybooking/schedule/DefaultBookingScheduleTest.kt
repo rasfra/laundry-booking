@@ -8,7 +8,7 @@ class DefaultBookingScheduleTest {
     private val schedule = DefaultBookingSchedule(DefaultRoomRepository(2), 12, listOf(4, 4)) // 12-16, 16-20
 
     @Test
-    fun generatesSlotPeriods() {
+    fun generatesTimePeriods() {
         assertEquals(2, schedule.timePeriods.size)
         assertEquals(12, schedule.timePeriods[0].start.hour)
         assertEquals(16, schedule.timePeriods[0].end.hour)
