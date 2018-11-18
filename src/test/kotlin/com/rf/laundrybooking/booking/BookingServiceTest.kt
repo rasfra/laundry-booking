@@ -6,17 +6,23 @@ import com.rf.laundrybooking.schedule.Room
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.*
+import java.time.Clock
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 class BookingServiceTest {
     private val schedule = DefaultBookingSchedule(DefaultRoomRepository(2), 7, listOf(5, 4, 3, 3))
-    val earlyMorning = LocalDateTime.of(2018, 1, 1, 6, 0)
-    private val bookingService = BookingService(InMemoryBookingRepository(), schedule, clockAt(earlyMorning))
-    val user = User("user")
+    private val repository = InMemoryBookingRepository()
+    private val openingHour = LocalDateTime.of(2018, 1, 1, 7, 0)
+    private val room1 = Room("1")
+    private val room2 = Room("2")
+    private val periods = 0..3
+    private val user = User("user")
 
     @Test
     fun listAvailable() {
-        val available = bookingService.available(earlyMorning.toLocalDate())
+        val available = bookingServiceAt(openingHour).available(openingHour.toLocalDate())
         assertEquals(4 * 2, available.size)
         assertEquals(Room("1"), available.first().room)
         assertEquals(7, available.first().timePeriod.start.hour)
@@ -24,9 +30,9 @@ class BookingServiceTest {
     }
 
     @Test
-    fun listAvailableAtMidOfDay() {
-        val bookingService = BookingService(InMemoryBookingRepository(), schedule,
-                clockAt(LocalDateTime.of(2018, 1, 1, 15, 0)))
+    fun listAvailableWithPassedPeriod() {
+        val duringFirstPeriod = LocalDateTime.of(2018, 1, 1, 15, 0)
+        val bookingService = bookingServiceAt(duringFirstPeriod)
 
         val available = bookingService.available(LocalDate.of(2018, 1, 1))
         assertEquals(3 * 2, available.size)
@@ -37,13 +43,14 @@ class BookingServiceTest {
 
     @Test
     fun bookSuccessfully() {
-        val available = bookingService.available(earlyMorning.toLocalDate())
+        val bookingService = bookingServiceAt(openingHour)
+        val available = bookingService.available(openingHour.toLocalDate())
         assert(available.isNotEmpty())
 
         val slotToBook = available.first()
         bookingService.book(user, slotToBook.room, slotToBook.day, slotToBook.timePeriod.id)
 
-        val availableAfterBooking = bookingService.available(earlyMorning.toLocalDate())
+        val availableAfterBooking = bookingService.available(openingHour.toLocalDate())
         assertEquals(ArrayList(available).apply { remove(slotToBook) }, availableAfterBooking)
 
         val booked = bookingService.booked()
@@ -52,16 +59,27 @@ class BookingServiceTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun doubleBookingFails() {
-        val available = bookingService.available(earlyMorning.toLocalDate())
+        val bookingService = bookingServiceAt(openingHour)
+        val available = bookingService.available(openingHour.toLocalDate())
         assert(available.isNotEmpty())
         val slotToBook = available.first()
         bookingService.book(user, slotToBook.room, slotToBook.day, slotToBook.timePeriod.id)
         bookingService.book(user, slotToBook.room, slotToBook.day, slotToBook.timePeriod.id)
     }
 
+    @Test(expected = IllegalArgumentException::class)
+    fun pastBookingFails() {
+        val bookingService = bookingServiceAt(openingHour)
+        val available = bookingService.available(openingHour.toLocalDate())
+        assert(available.isNotEmpty())
+        val slotToBook = available.first()
+        bookingService.book(user, slotToBook.room, slotToBook.day.minusDays(1), slotToBook.timePeriod.id)
+    }
+
     @Test
-    fun canBookDifferentRoomsAtSameTime() {
-        val available = bookingService.available(earlyMorning.toLocalDate())
+    fun canBookDifferentRoomsAtSamePeriod() {
+        val bookingService = bookingServiceAt(openingHour)
+        val available = bookingService.available(openingHour.toLocalDate())
         assert(available.isNotEmpty())
         val slotToBook = available.first()
         bookingService.book(user, Room("1"), slotToBook.day, slotToBook.timePeriod.id)
@@ -71,20 +89,39 @@ class BookingServiceTest {
     }
 
     @Test
-    fun listBooked() {
-        bookSuccessfully()
-        val booked = bookingService.booked()
-        assertEquals(1, booked.size)
+    fun onlyListFutureBookings() {
+        book(bookingServiceAt(openingHour), room1, periods.first)
+
+        // Go forward in time a bit
+        val booked = bookingServiceAt(openingHour.plusHours(6)).booked()
+        assertTrue(booked.isEmpty())
     }
 
     @Test
     fun cancel() {
-        bookSuccessfully()
-        val booking = bookingService.booked().first()
+        val bookingService = bookingServiceAt(openingHour)
+        val booking = book(bookingService, room1, periods.first)
         bookingService.cancel(booking.id)
-        assertTrue(bookingService.available(earlyMorning.toLocalDate()).contains(booking.timeSlot))
+        assertTrue(bookingService.available(openingHour.toLocalDate()).contains(booking.timeSlot))
     }
 
-    private fun clockAt(at: LocalDateTime) = Clock.fixed(ZonedDateTime.of(at, ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault())
+    private fun book(bookingService: BookingService, room: Room, period: Int): Booking {
+        val available = bookingService.available(openingHour.toLocalDate())
+        assert(available.isNotEmpty())
+
+        val slotToBook = available.first()
+        bookingService.book(user, room, slotToBook.day, period)
+
+        val availableAfterBooking = bookingService.available(openingHour.toLocalDate())
+        assertEquals(ArrayList(available).apply { remove(slotToBook) }, availableAfterBooking)
+
+        val booked = bookingService.booked()
+        assertEquals(Booking("0", user, slotToBook), booked.first())
+        return booked.first()
+    }
+
+    private fun bookingServiceAt(time: LocalDateTime) =
+            BookingService(repository, schedule,
+                    Clock.fixed(time.atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault()))
 
 }

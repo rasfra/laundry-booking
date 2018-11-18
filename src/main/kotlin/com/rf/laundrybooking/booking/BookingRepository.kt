@@ -9,5 +9,4 @@ interface BookingRepository {
     fun list(): List<Booking>
     fun book(user: User, room: Room, day: LocalDate, period: TimePeriod): Booking
     fun cancel(booking: Booking): Boolean
-
 }
